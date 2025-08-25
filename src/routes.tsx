@@ -1,11 +1,16 @@
 import { Icon } from '@chakra-ui/react';
+import { FaPaperPlane } from 'react-icons/fa';
 import {
   MdBarChart,
   MdPerson,
   MdHome,
   MdLock,
   MdOutlineShoppingCart,
+  MdProductionQuantityLimits,
+  MdOutlineLocalOffer,
+  MdOutlineVolunteerActivism,
 } from 'react-icons/md';
+import { RiBuilding2Line, RiVolumeUpLine } from 'react-icons/ri';
 
 // Admin Imports
 // import MainDashboard from './pages/admin/default';
@@ -22,8 +27,24 @@ const routes: IRoute[] = [
   {
     name: 'Main Dashboard',
     layout: '/admin',
-    path: '/default',
+    path: '/',
     icon: <Icon as={MdHome} width="20px" height="20px" color="inherit" />,
+  },
+    {
+    name: 'Vouchers',
+    layout: '/admin',
+    path: '/vouchers',
+    icon: <Icon as={RiBuilding2Line} width="20px" height="20px" color="inherit" />,
+  },{
+    name: 'Offers',
+    layout: '/admin',
+    path: '/offers',
+    icon: <Icon as={MdOutlineLocalOffer} width="20px" height="20px" color="inherit" />,
+  },{
+    name: 'Products',
+    layout: '/admin',
+    path: '/products',
+    icon: <Icon as={MdProductionQuantityLimits} width="20px" height="20px" color="inherit" />,
   },
   // {
   //   name: 'NFT Marketplace',

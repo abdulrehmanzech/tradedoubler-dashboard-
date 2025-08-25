@@ -27,12 +27,18 @@ export function SidebarLinks(props: SidebarLinksProps) {
   let brandColor = useColorModeValue('brand.500', 'brand.400');
 
   // verifies if routeName is the one active (in browser input)
-  const activeRoute = useCallback(
-    (routeName: string) => {
-      return pathname?.includes(routeName);
-    },
-    [pathname],
-  );
+  // const activeRoute = useCallback(
+  //   (routeName: string) => {
+  //     return pathname?.includes(routeName);
+  //   },
+  //   [pathname],
+  // );
+const activeRoute = useCallback(
+  (routePath: string) => {
+    return pathname === routePath || pathname === `/admin${routePath}`;
+  },
+  [pathname],
+);
 
   // this function creates the links from the secondary accordions (for example auth -> sign-in -> default)
   const createLinks = (routes: IRoute[]) => {

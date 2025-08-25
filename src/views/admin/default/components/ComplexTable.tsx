@@ -2,6 +2,9 @@ import {
   Box,
   Button,
   Flex,
+  Input,
+  InputGroup,
+  InputLeftElement,
   Icon,
   Progress,
   Table,
@@ -13,8 +16,8 @@ import {
   Tr,
   useColorModeValue,
 } from '@chakra-ui/react';
+import { SearchIcon } from '@chakra-ui/icons';
 import {
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -22,63 +25,68 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { EnhancedMenu } from 'app/admin/default/EnhancedMenu';
-// Custom components
 import Card from 'components/card/Card';
-import Menu from 'components/menu/MainMenu';
 import * as React from 'react';
-// Assets
-import { MdCancel, MdCheckCircle, MdOutlineError } from 'react-icons/md';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState(value);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 type ComplexTableProps = {
   tableData: any[];
   columnsData: any[];
   title?: string;
-  enableHorizontalScroll?: boolean; // New prop for controlling scroll
+  enableHorizontalScroll?: boolean;
   loading?: boolean;
   onPanelChange?: (panelId: string) => void;
   selectedPanel?: string;
+  isSearch?: boolean;
 };
-
-type RowObj = {
-  name: string;
-  status: string;
-  date: string;
-  progress: number;
-};
-
-const columnHelper = createColumnHelper<RowObj>();
 
 export default function ComplexTable({
   tableData,
   columnsData,
   title,
-  enableHorizontalScroll = false, // Default false
+  enableHorizontalScroll = false,
   loading = false,
   onPanelChange,
   selectedPanel,
+  isSearch = false,
 }: ComplexTableProps) {
-  console.log('tableData', tableData);
-
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  const debouncedSearch = useDebounce(searchTerm, 300); // ✅ smooth typing
+
   const textColor = useColorModeValue('secondaryGray.900', 'white');
   const borderColor = useColorModeValue('gray.200', 'whiteAlpha.100');
-  const scrollbarThumbColor = useColorModeValue('gray.300', 'gray.600');
-  const scrollbarTrackColor = useColorModeValue('gray.100', 'gray.700');
 
-  let defaultData = tableData;
+  // ✅ Filter with debounced search
+  const filteredData = React.useMemo(() => {
+    if (!debouncedSearch) return tableData;
+    return tableData.filter((row) =>
+      Object.values(row).some((val) =>
+        String(val).toLowerCase().includes(debouncedSearch.toLowerCase()),
+      ),
+    );
+  }, [debouncedSearch, tableData]);
 
-  const [data, setData] = React.useState(() => [...defaultData]);
   const table = useReactTable({
-    data: tableData,
+    data: filteredData,
     columns: columnsData,
-    state: {
-      sorting,
-    },
+    state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    debugTable: true,
   });
+
   const [pageIndex, setPageIndex] = React.useState(0);
   const pageSize = 5;
 
@@ -86,40 +94,8 @@ export default function ComplexTable({
     .getRowModel()
     .rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
 
-  // Custom scrollbar styles - only when scroll is enabled
-  const scrollbarStyles = enableHorizontalScroll
-    ? {
-        // Webkit browsers (Chrome, Safari, Edge)
-        '&::-webkit-scrollbar': {
-          height: '8px',
-        },
-        '&::-webkit-scrollbar-track': {
-          backgroundColor: scrollbarTrackColor,
-          borderRadius: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          backgroundColor: scrollbarThumbColor,
-          borderRadius: '4px',
-          border: `1px solid ${scrollbarTrackColor}`,
-        },
-        '&::-webkit-scrollbar-thumb:hover': {
-          backgroundColor: useColorModeValue('gray.400', 'gray.500'),
-        },
-        // Firefox
-        scrollbarWidth: 'thin',
-        scrollbarColor: `${scrollbarThumbColor} ${scrollbarTrackColor}`,
-      }
-    : {};
-
   return (
-    <Card
-      flexDirection="column"
-      w="100%"
-      px="0px"
-      overflowX={
-        enableHorizontalScroll ? 'auto' : { sm: 'scroll', lg: 'hidden' }
-      }
-    >
+    <Card flexDirection="column" w="100%" px="0px">
       <Flex px="25px" mb="8px" justifyContent="space-between" align="center">
         <Text
           color={textColor}
@@ -129,99 +105,91 @@ export default function ComplexTable({
         >
           {title || 'Complex Table'}
         </Text>
-        {/* <Menu /> */}
-        <EnhancedMenu
-          onPanelChange={onPanelChange}
-          selectedPanel={selectedPanel}
-        />
+
+        <Flex align="center" gap={3}>
+          {/* ✅ Modern Search Input */}
+          {isSearch && (
+            <InputGroup w="280px">
+              <InputLeftElement pointerEvents="none">
+                <Icon as={SearchIcon} color="gray.400" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search..."
+                size="md"
+                borderRadius="full"
+                bg={useColorModeValue('gray.100', 'gray.700')}
+                _hover={{ bg: useColorModeValue('white', 'gray.600') }}
+                _focus={{
+                  bg: useColorModeValue('white', 'gray.600'),
+                  borderColor: 'blue.400',
+                  boxShadow: '0 0 0 1px #4299e1',
+                }}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPageIndex(0);
+                }}
+              />
+            </InputGroup>
+          )}
+
+          <EnhancedMenu
+            onPanelChange={onPanelChange}
+            selectedPanel={selectedPanel}
+          />
+        </Flex>
       </Flex>
 
-      <Box
-        // Only add scroll styles when enabled
-        overflowX={enableHorizontalScroll ? 'auto' : 'hidden'}
-        overflowY="hidden"
-        sx={scrollbarStyles}
-        style={enableHorizontalScroll ? { scrollBehavior: 'smooth' } : {}}
-      >
-        <Table
-          variant="simple"
-          color="gray.500"
-          mb="24px"
-          mt="12px"
-          // Only set minW when scroll is enabled
-          minW={enableHorizontalScroll ? 'max-content' : 'auto'}
-        >
+      {/* ✅ Table */}
+      <Box overflowX={enableHorizontalScroll ? 'auto' : 'hidden'}>
+        <Table variant="simple" color="gray.500" mb="24px" mt="12px">
           <Thead>
-            {table?.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <Tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <Th
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      pe="10px"
-                      borderColor={borderColor}
-                      cursor="pointer"
-                      onClick={header.column.getToggleSortingHandler()}
-                      // Only apply minW and whiteSpace when scroll is enabled
-                      minW={enableHorizontalScroll ? '150px' : 'auto'}
-                      whiteSpace={enableHorizontalScroll ? 'nowrap' : 'normal'}
+                {headerGroup.headers.map((header) => (
+                  <Th
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    pe="10px"
+                    borderColor={borderColor}
+                    cursor="pointer"
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <Flex
+                      justifyContent="space-between"
+                      align="center"
+                      fontSize={{ sm: '10px', lg: '12px' }}
+                      color="gray.400"
                     >
-                      <Flex
-                        justifyContent="space-between"
-                        align="center"
-                        fontSize={{ sm: '10px', lg: '12px' }}
-                        color="gray.400"
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                        {{
-                          asc: '',
-                          desc: '',
-                        }[header.column.getIsSorted() as string] ?? null}
-                      </Flex>
-                    </Th>
-                  );
-                })}
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                    </Flex>
+                  </Th>
+                ))}
               </Tr>
             ))}
           </Thead>
           <Tbody>
-            {currentRows.map((row) => {
-              return (
-                <Tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => {
-                    return (
-                      <Td
-                        key={cell.id}
-                        fontSize={{ sm: '14px' }}
-                        // Keep original responsive minW, only add scroll-specific when needed
-                        minW={
-                          enableHorizontalScroll
-                            ? '150px'
-                            : { sm: '150px', md: '200px', lg: 'auto' }
-                        }
-                        whiteSpace={
-                          enableHorizontalScroll ? 'nowrap' : 'normal'
-                        }
-                        borderColor="transparent"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </Td>
-                    );
-                  })}
-                </Tr>
-              );
-            })}
+            {currentRows.map((row) => (
+              <Tr key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <Td
+                    key={cell.id}
+                    fontSize={{ sm: '14px' }}
+                    borderColor="transparent"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </Td>
+                ))}
+              </Tr>
+            ))}
           </Tbody>
         </Table>
       </Box>
 
+      {/* ✅ Pagination */}
       <Flex justify="center" mt="4" gap="4" align="center">
         <Button
           size="sm"
